@@ -12,9 +12,15 @@
         <span>Past Orders</span>
       </router-link>
     </nav>
-    <div @click="toogleSidebar" class="top-bar-cart-link">
-      <i class="icofont-cart-alt icofont-1x"></i>
-      <span>Cart ({{ totalItem }})</span>
+    <div class="flex-nav-items">
+      <div @click="toogleSidebar" class="top-bar-cart-link">
+        <i class="icofont-cart-alt icofont-1x"></i>
+        <span>Cart ({{ totalItem }})</span>
+      </div>
+      <div @click="signinWithGoogle" class="top-bar-cart-link">
+        <span v-if="!user?.uid">Signin</span>
+        <img :src="user.photoURL" v-if="user?.uid" width="50" height="50" />
+      </div>
     </div>
   </header>
   <router-view :inventory="inventory" :addToCart="addToCart" />
@@ -22,8 +28,10 @@
 </template>
 
 <script>
+import { signInWithPopup, GoogleAuthProvider, onAuthStateChanged } from 'firebase/auth'
 import SideBar from '@/components/SideBar.vue'
 import food from '@/data/food.json'
+import { auth, signOut } from './config/firebaseConfig'
 
 export default {
   components: {
@@ -33,7 +41,13 @@ export default {
     return {
       showSidebar: false,
       inventory: food,
-      cart: {}
+      cart: {},
+      user: {
+        name: null,
+        email: null,
+        photoURL: null,
+        uid: null
+      }
     }
   },
   computed: {
@@ -55,6 +69,36 @@ export default {
     },
     removeItem (name) {
       delete this.cart[name]
+    },
+    async signinWithGoogle () {
+      if (this.user.uid) return signOut()
+      const provider = new GoogleAuthProvider()
+      signInWithPopup(auth, provider)
+    }
+  },
+  async mounted () {
+    console.log(process.env)
+    onAuthStateChanged(auth, (user) => {
+      if (!user?.uid) {
+        this.user = {
+          name: null,
+          email: null,
+          photoURL: null,
+          uid: null
+        }
+        return
+      }
+      this.user = {
+        name: user?.displayName,
+        email: user?.email,
+        photoURL: user?.photoURL,
+        uid: user?.uid
+      }
+    })
+  },
+  watch: {
+    user (val) {
+      console.log(val)
     }
   }
 }
